@@ -119,7 +119,7 @@ export default {
         }
       }
     },
-    initializeDataItem(item) {
+    initializeDataItem(item, attrs) {
       function Model(
         item,
         textFieldName,
@@ -148,6 +148,9 @@ export default {
         ),
         item
       );
+      if (attrs) {
+        Object.assign(node, JSON.parse(JSON.stringify(attrs)));
+      }
       let self = this;
       node.addBefore = function(data, selectedNode) {
         let newItem = self.initializeDataItem(data);
@@ -221,7 +224,7 @@ export default {
     },
     handleSingleSelectItems(oriNode, oriItem) {
       this.handleRecursionNodeChilds(this, node => {
-        if (node.model) node.model.selected = false;
+        if (node.model) this.$set(node.model,"selected",false);
       });
       oriNode.model.selected = true;
     },
@@ -233,19 +236,23 @@ export default {
     },
     onItemToggle(oriNode, oriItem, e) {
       if (oriNode.model.opened) {
-        this.handleAsyncLoad(
-          oriNode.model[this.childrenFieldName],
-          oriNode,
-          oriItem
-        );
+        this.handleAsyncLoad(oriNode.model[this.childrenFieldName], oriNode);
       }
       this.$emit("item-toggle", oriNode, oriItem, e);
     },
-    handleAsyncLoad(oriParent, oriNode, oriItem) {
+    reasync(node) {
+      this.$set(
+        node.model[this.childrenFieldName],
+        0,
+        this.initializeLoading()
+      );
+      this.handleAsyncLoad(node.model[this.childrenFieldName], node);
+    },
+    handleAsyncLoad(oriParent, oriNode) {
       var self = this;
       if (this.async) {
-        if (oriParent[0].loading) {
-          this.async(oriNode, data => {
+        if (oriParent.length > 0 && oriParent[0].loading) {
+          this.async(oriNode, (data, attrs) => {
             if (data.length > 0) {
               for (let i in data) {
                 if (!data[i].isLeaf) {
@@ -255,7 +262,7 @@ export default {
                     ];
                   }
                 }
-                var dataItem = self.initializeDataItem(data[i]);
+                var dataItem = self.initializeDataItem(data[i], attrs);
                 self.$set(oriParent, i, dataItem);
               }
             } else {
